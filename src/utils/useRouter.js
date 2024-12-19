@@ -10,38 +10,40 @@ const ROUTE_PAGE_MAP = {
   "/profile": () => renderProfilePage(),
 };
 
-const routeGuard = (route, type = "path") => {
+const routeGuard = (route, type) => {
   const isLogin = useUserStore.isLogin();
-  const isHash = type === "hash";
 
-  if ((route === "/login" || route === "#/login") && isLogin) {
-    return isHash ? "#/" : "/";
+  const isHash = type === "hash";
+  const refinedRoute = route.replace("#", "");
+
+  if (refinedRoute === "/login" && isLogin) {
+    return `${isHash ? "#" : ""}/`;
   }
 
-  if ((route === "/profile" || route === "#/profile") && !isLogin) {
-    return isHash ? "#/login" : "/login";
+  if (refinedRoute === "/profile" && !isLogin) {
+    return `${isHash ? "#" : ""}/login`;
   }
 
   return route;
 };
 
-export const useRouter = () => {
-  const historyRouter = (path) => {
-    let pathname = path || window.location.pathname;
-    pathname = routeGuard(pathname);
+export const useRouter = (type) => {
+  const historyRouter = (pathname) => {
+    let newPathname = pathname || window.location.pathname;
+    newPathname = routeGuard(newPathname, type);
 
-    let render = ROUTE_PAGE_MAP[pathname];
+    let render = ROUTE_PAGE_MAP[newPathname];
     if (!render) {
       render = () => renderNotFoundPage();
     }
 
-    history.pushState(null, "", pathname);
+    history.pushState(null, "", newPathname);
     render();
   };
 
   const hashRouter = (hash) => {
     let newHash = hash || window.location.hash;
-    newHash = routeGuard(newHash, "hash");
+    newHash = routeGuard(newHash, type);
 
     let render = ROUTE_PAGE_MAP[newHash.replace("#", "")];
     if (!render) {
@@ -53,11 +55,7 @@ export const useRouter = () => {
   };
 
   const router = (value) => {
-    if (window.location.hash) {
-      hashRouter(value);
-    } else {
-      historyRouter(value);
-    }
+    return type === "hash" ? hashRouter(value) : historyRouter(value);
   };
 
   return { router };
